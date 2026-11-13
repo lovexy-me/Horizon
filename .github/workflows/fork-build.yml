@@ -1,0 +1,26 @@
+# Fork-only: run the tests and build the Docker image, kept as an artifact.
+# No tag, no Release, no registry push.
+name: fork build
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: tests
+        run: |
+          uv python install 3.11
+          uv sync --frozen --extra dev
+          uv run pytest -q
+      - name: docker image
+        run: |
+          docker build -t horizon:fork-${{ github.run_number }} .
+          docker save horizon:fork-${{ github.run_number }} | gzip > horizon-image.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: horizon-image-${{ github.run_number }}
+          path: horizon-image.tar.gz
